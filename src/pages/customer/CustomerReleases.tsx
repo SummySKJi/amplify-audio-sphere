@@ -10,6 +10,11 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Loader2, ExternalLink } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   'pending_review': 'bg-yellow-600 hover:bg-yellow-700',
@@ -29,56 +34,53 @@ const statusLabels: Record<string, string> = {
   'takedown_completed': 'Takedown Completed',
 };
 
-const mockReleases = [
-  {
-    id: '1',
-    song_name: 'Summer Vibes',
-    artist: 'DJ Sunshine',
-    type: 'single',
-    release_date: '2023-06-15',
-    status: 'live',
-    cover_art_url: 'https://placehold.co/400',
-  },
-  {
-    id: '2',
-    song_name: 'Midnight Dreams',
-    artist: 'Luna Moon',
-    type: 'single',
-    release_date: '2023-07-20',
-    status: 'pending_review',
-    cover_art_url: 'https://placehold.co/400',
-  },
-  {
-    id: '3',
-    song_name: 'Echoes of You',
-    artist: 'Echo Band',
-    type: 'single',
-    release_date: null,
-    status: 'rejected',
-    cover_art_url: 'https://placehold.co/400',
-  },
-  {
-    id: '4',
-    song_name: 'Monsoon Magic',
-    artist: 'Rain Makers',
-    type: 'ep',
-    release_date: '2023-08-05',
-    status: 'approved',
-    cover_art_url: 'https://placehold.co/400',
-  },
-];
-
 const CustomerReleases = () => {
+  const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredReleases = mockReleases.filter((release) => {
-    const matchesSearch = release.song_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          release.artist.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filter === 'all' || release.status === filter;
-    
-    return matchesSearch && matchesFilter;
+  // Fetch releases
+  const { data: releases, isLoading } = useQuery({
+    queryKey: ['releases', user?.id, filter],
+    queryFn: async () => {
+      let query = supabase
+        .from('releases')
+        .select(`
+          *,
+          artists:artist_id (name),
+          labels:label_id (name)
+        `)
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+        
+      if (filter !== 'all') {
+        query = query.eq('status', filter);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user
   });
+
+  // Filter releases by search query
+  const filteredReleases = releases?.filter((release) => {
+    const songName = release.song_name?.toLowerCase() || '';
+    const artistName = release.artists?.name?.toLowerCase() || '';
+    const searchLower = searchQuery.toLowerCase();
+    
+    return songName.includes(searchLower) || artistName.includes(searchLower);
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -116,54 +118,79 @@ const CustomerReleases = () => {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredReleases.map((release) => (
-          <Card key={release.id} className="bg-gray-800 border-gray-700 overflow-hidden">
-            <div className="relative h-48">
-              <img
-                src={release.cover_art_url}
-                alt={release.song_name}
-                className="h-full w-full object-cover"
-              />
-              <Badge className={`absolute top-2 right-2 ${statusColors[release.status]}`}>
-                {statusLabels[release.status]}
-              </Badge>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-white text-lg">{release.song_name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-400">Artist:</span>
-                  <span className="text-sm text-white">{release.artist}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-400">Type:</span>
-                  <span className="text-sm text-white capitalize">{release.type}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-400">Release Date:</span>
-                  <span className="text-sm text-white">
-                    {release.release_date ? new Date(release.release_date).toLocaleDateString() : 'Pending'}
-                  </span>
-                </div>
+        {filteredReleases && filteredReleases.length > 0 ? (
+          filteredReleases.map((release) => (
+            <Card key={release.id} className="bg-gray-800 border-gray-700 overflow-hidden">
+              <div className="relative h-48">
+                <img
+                  src={release.cover_art_url}
+                  alt={release.song_name}
+                  className="h-full w-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "https://placehold.co/400x400/333/white?text=No+Image";
+                  }}
+                />
+                <Badge className={`absolute top-2 right-2 ${statusColors[release.status]}`}>
+                  {statusLabels[release.status]}
+                </Badge>
               </div>
-              <div className="mt-4 flex items-center justify-center">
-                <button className="text-sm text-primary hover:underline">
-                  View Details
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              <CardHeader className="pb-2">
+                <CardTitle className="text-white text-lg">{release.song_name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-400">Artist:</span>
+                    <span className="text-sm text-white">{release.artists?.name || 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-400">Label:</span>
+                    <span className="text-sm text-white">{release.labels?.name || 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-400">Type:</span>
+                    <span className="text-sm text-white capitalize">{release.type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-400">Release Date:</span>
+                    <span className="text-sm text-white">
+                      {release.release_date ? new Date(release.release_date).toLocaleDateString() : 'Pending'}
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center justify-between">
+                  {release.status === 'rejected' && (
+                    <Badge variant="destructive">
+                      Rejected
+                    </Badge>
+                  )}
+                  {release.status === 'live' && (
+                    <Button variant="outline" size="sm" className="flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      <span>Track</span>
+                    </Button>
+                  )}
+                  <div className="ml-auto">
+                    <Button variant="link" className="text-primary hover:text-primary-focus">
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12">
+            <h3 className="text-lg font-medium text-gray-300">No releases found</h3>
+            <p className="text-gray-400 mb-6">
+              {searchQuery ? 'Try adjusting your search query' : 'You haven\'t uploaded any music yet'}
+            </p>
+            <Button asChild>
+              <a href="/dashboard/upload">Upload Your First Release</a>
+            </Button>
+          </div>
+        )}
       </div>
-
-      {filteredReleases.length === 0 && (
-        <div className="text-center py-12">
-          <h3 className="text-lg font-medium text-gray-300">No releases found</h3>
-          <p className="text-gray-400">Try adjusting your filters or search query</p>
-        </div>
-      )}
     </div>
   );
 };

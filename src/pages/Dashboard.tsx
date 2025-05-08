@@ -1,9 +1,13 @@
 
 import { useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2, Music, Upload, Wallet, FileDown, Youtube } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const Dashboard = () => {
   const { user, profile, isAdmin } = useAuth();
@@ -15,32 +19,88 @@ const Dashboard = () => {
     }
   }, [user, navigate]);
 
+  // Fetch releases
+  const { data: releases, isLoading: releasesLoading } = useQuery({
+    queryKey: ['releases'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('releases')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user
+  });
+
+  // Fetch wallet
+  const { data: wallet, isLoading: walletLoading } = useQuery({
+    queryKey: ['wallet'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('*')
+        .eq('user_id', user?.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || { balance: 0 };
+    },
+    enabled: !!user
+  });
+
+  // Mock data for charts
   const mockData = [
+    { name: "Jan", total: 2400 },
+    { name: "Feb", total: 1398 },
+    { name: "Mar", total: 9800 },
+    { name: "Apr", total: 3908 },
+    { name: "May", total: 4800 },
+    { name: "Jun", total: 3800 },
+  ];
+
+  const quickLinks = [
     {
-      name: "Jan",
-      total: 2400,
+      title: "Upload Music",
+      description: "Submit your tracks for distribution",
+      icon: <Upload className="h-6 w-6 text-primary" />,
+      path: "/dashboard/upload",
     },
     {
-      name: "Feb",
-      total: 1398,
+      title: "My Releases",
+      description: "View and manage your music",
+      icon: <Music className="h-6 w-6 text-primary" />,
+      path: "/dashboard/releases",
     },
     {
-      name: "Mar",
-      total: 9800,
+      title: "Wallet",
+      description: "Check earnings and withdraw funds",
+      icon: <Wallet className="h-6 w-6 text-primary" />,
+      path: "/dashboard/wallet",
     },
     {
-      name: "Apr",
-      total: 3908,
+      title: "Royalty Reports",
+      description: "Access your royalty statements",
+      icon: <FileDown className="h-6 w-6 text-primary" />,
+      path: "/dashboard/royalty-reports",
     },
     {
-      name: "May",
-      total: 4800,
-    },
-    {
-      name: "Jun",
-      total: 3800,
+      title: "Copyright Removal",
+      description: "Request YouTube copyright removals",
+      icon: <Youtube className="h-6 w-6 text-primary" />,
+      path: "/dashboard/copyright-removal",
     },
   ];
+
+  if (releasesLoading || walletLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -51,6 +111,26 @@ const Dashboard = () => {
         </p>
       </div>
 
+      {/* Quick Links */}
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+        {quickLinks.map((link) => (
+          <Card key={link.path} className="bg-gray-800 border-gray-700 hover:border-primary/50 transition-all">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-center mb-2">
+                {link.icon}
+              </div>
+              <CardTitle className="text-white text-center text-lg">{link.title}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <p className="text-xs text-gray-400 mb-3">{link.description}</p>
+              <Button asChild size="sm" variant="secondary" className="w-full">
+                <Link to={link.path}>Go</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-gray-800 border-gray-700">
@@ -58,18 +138,18 @@ const Dashboard = () => {
             <CardTitle className="text-white text-sm font-medium">Total Releases</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">12</div>
-            <p className="text-xs text-gray-400 mt-1">+2 from last month</p>
+            <div className="text-2xl font-bold text-white">{releases?.length || 0}</div>
+            <p className="text-xs text-gray-400 mt-1">All your music submissions</p>
           </CardContent>
         </Card>
         
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm font-medium">Total Earnings</CardTitle>
+            <CardTitle className="text-white text-sm font-medium">Current Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">₹42,560</div>
-            <p className="text-xs text-green-500 mt-1">+10% from last month</p>
+            <div className="text-2xl font-bold text-white">₹{wallet?.balance || 0}</div>
+            <p className="text-xs text-gray-400 mt-1">Available to withdraw</p>
           </CardContent>
         </Card>
         
@@ -78,18 +158,22 @@ const Dashboard = () => {
             <CardTitle className="text-white text-sm font-medium">Pending Reviews</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">3</div>
-            <p className="text-xs text-gray-400 mt-1">Updated 30 mins ago</p>
+            <div className="text-2xl font-bold text-white">
+              {releases?.filter(r => r.status === 'pending_review').length || 0}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Releases awaiting approval</p>
           </CardContent>
         </Card>
         
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm font-medium">Total Artists</CardTitle>
+            <CardTitle className="text-white text-sm font-medium">Live Releases</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-white">8</div>
-            <p className="text-xs text-gray-400 mt-1">+1 new this week</p>
+            <div className="text-2xl font-bold text-white">
+              {releases?.filter(r => r.status === 'live').length || 0}
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Available on streaming platforms</p>
           </CardContent>
         </Card>
       </div>
@@ -119,6 +203,11 @@ const Dashboard = () => {
                 axisLine={false}
                 tickFormatter={(value) => `₹${value}`}
               />
+              <Tooltip 
+                formatter={(value) => [`₹${value}`, 'Earnings']}
+                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '0.375rem' }}
+                labelStyle={{ color: 'white' }}
+              />
               <Bar dataKey="total" fill="#8884d8" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -135,27 +224,32 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start gap-4 border-b border-gray-700 pb-4">
-              <div className="ml-2">
-                <p className="text-sm font-medium text-white">New release pending review</p>
-                <p className="text-xs text-gray-400">Your song "Summer Nights" is pending review</p>
-                <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
+            {releases && releases.length > 0 ? (
+              releases.slice(0, 3).map((release) => (
+                <div key={release.id} className="flex items-start gap-4 border-b border-gray-700 pb-4">
+                  <div className="ml-2">
+                    <p className="text-sm font-medium text-white">{release.status === 'pending_review' ? 'New release pending review' : 'Release status updated'}</p>
+                    <p className="text-xs text-gray-400">Your song "{release.song_name}" is {release.status.replace('_', ' ')}</p>
+                    <p className="text-xs text-gray-500 mt-1">{new Date(release.created_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-gray-400">No recent activity</p>
+                <Button asChild variant="link" className="mt-2">
+                  <Link to="/dashboard/upload">Upload your first release</Link>
+                </Button>
               </div>
-            </div>
-            <div className="flex items-start gap-4 border-b border-gray-700 pb-4">
-              <div className="ml-2">
-                <p className="text-sm font-medium text-white">New earnings added</p>
-                <p className="text-xs text-gray-400">₹1,245 has been added to your wallet</p>
-                <p className="text-xs text-gray-500 mt-1">Yesterday</p>
+            )}
+            
+            {releases?.length > 3 && (
+              <div className="text-center pt-2">
+                <Button asChild variant="link">
+                  <Link to="/dashboard/releases">View all releases</Link>
+                </Button>
               </div>
-            </div>
-            <div className="flex items-start gap-4">
-              <div className="ml-2">
-                <p className="text-sm font-medium text-white">Release is now live</p>
-                <p className="text-xs text-gray-400">Your song "Midnight Dreams" is now live on all platforms</p>
-                <p className="text-xs text-gray-500 mt-1">3 days ago</p>
-              </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>

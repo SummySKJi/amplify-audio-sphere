@@ -1,11 +1,32 @@
 
 import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import AuthForms from '@/components/AuthForms';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode') as 'login' | 'signup' | 'forgot' || 'login';
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (user && !isLoading) {
+      setRedirecting(true);
+      navigate('/dashboard');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading || redirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl text-white">{redirecting ? 'Redirecting to dashboard...' : 'Loading...'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-hero-pattern flex flex-col">

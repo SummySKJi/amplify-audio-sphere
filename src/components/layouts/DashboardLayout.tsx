@@ -11,6 +11,7 @@ import {
 import AdminSidebar from "@/components/dashboard/AdminSidebar";
 import CustomerSidebar from "@/components/dashboard/CustomerSidebar";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { toast } from "sonner";
 
 const DashboardLayout = () => {
   const { user, isLoading, isAdmin } = useAuth();
@@ -18,16 +19,25 @@ const DashboardLayout = () => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
+    // Check for authentication
     if (!isLoading && !user) {
+      toast.info("You need to sign in to access the dashboard.");
       navigate("/auth");
+      return;
+    }
+
+    // Show welcome message on first load
+    if (user && !sessionStorage.getItem('dashboardWelcome')) {
+      toast.success(`Welcome to your dashboard, ${user.user_metadata?.full_name || 'User'}!`);
+      sessionStorage.setItem('dashboardWelcome', 'true');
     }
   }, [user, isLoading, navigate]);
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-lg">Loading...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white">
+        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+        <p className="text-xl">Loading your dashboard...</p>
       </div>
     );
   }
