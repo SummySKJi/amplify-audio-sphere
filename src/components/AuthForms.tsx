@@ -1,11 +1,11 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 type AuthMode = 'login' | 'signup' | 'forgot';
 
@@ -17,6 +17,7 @@ const AuthForms = ({ initialMode = 'login' }: AuthFormsProps) => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn, signUp, resetPassword, user } = useAuth();
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -25,6 +26,12 @@ const AuthForms = ({ initialMode = 'login' }: AuthFormsProps) => {
     confirmPassword: '',
     termsAccepted: false
   });
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type } = e.target;
@@ -37,24 +44,28 @@ const AuthForms = ({ initialMode = 'login' }: AuthFormsProps) => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulating API call
-    setTimeout(() => {
+    try {
       if (mode === 'login') {
-        toast.success('Login successful!');
-        navigate('/dashboard');
+        await signIn(formData.email, formData.password);
       } else if (mode === 'signup') {
-        toast.success('Account created successfully! Please verify your email.');
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        await signUp(formData.email, formData.password, formData.fullName);
         setMode('login');
       } else if (mode === 'forgot') {
-        toast.success('Password reset link sent to your email.');
+        await resetPassword(formData.email);
         setMode('login');
       }
+    } catch (error) {
+      console.error('Authentication error:', error);
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -175,10 +186,16 @@ const AuthForms = ({ initialMode = 'login' }: AuthFormsProps) => {
           className="btn-primary w-full"
           disabled={isLoading || (mode === 'signup' && !formData.termsAccepted)}
         >
-          {isLoading ? 'Please wait...' : 
-           mode === 'login' ? 'Sign In' : 
-           mode === 'signup' ? 'Create Account' : 
-           'Send Reset Link'}
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Please wait...
+            </>
+          ) : (
+            mode === 'login' ? 'Sign In' : 
+            mode === 'signup' ? 'Create Account' : 
+            'Send Reset Link'
+          )}
         </Button>
 
         <div className="relative flex items-center justify-center mt-6">
