@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +12,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Define proper types that match our database schema
+type ReleaseType = 'single' | 'album' | 'ep';
+
 const CustomerUpload = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [releaseType, setReleaseType] = useState<string>('');
+  const [releaseType, setReleaseType] = useState<ReleaseType | ''>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [coverArt, setCoverArt] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string>('');
@@ -179,8 +181,8 @@ const CustomerUpload = () => {
       return;
     }
     
-    if (!selectedFile || !coverArt) {
-      toast.error('Please upload both an audio file and cover art');
+    if (!selectedFile || !coverArt || !releaseType) {
+      toast.error('Please fill in all required fields and upload both an audio file and cover art');
       return;
     }
     
@@ -207,12 +209,12 @@ const CustomerUpload = () => {
       const audioUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/${audioFileName}`;
       const coverArtUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/cover-arts/${coverFileName}`;
       
-      // 4. Create release in database
+      // 4. Create release in database - Make sure to use the correct types
       const { error: releaseError } = await supabase
         .from('releases')
         .insert({
           user_id: user.id,
-          type: releaseType,
+          type: releaseType as ReleaseType, // Ensure releaseType is the correct enum type
           song_name: songName,
           artist_id: artistId,
           instagram_id: instagramId || null,
@@ -281,7 +283,11 @@ const CustomerUpload = () => {
             {/* Release Type */}
             <div className="space-y-2">
               <Label htmlFor="type">Release Type*</Label>
-              <Select value={releaseType} onValueChange={setReleaseType} required>
+              <Select 
+                value={releaseType} 
+                onValueChange={(value: ReleaseType) => setReleaseType(value)} 
+                required
+              >
                 <SelectTrigger className="bg-gray-900 border-gray-700">
                   <SelectValue placeholder="Select release type" />
                 </SelectTrigger>

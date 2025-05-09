@@ -34,9 +34,13 @@ const statusLabels: Record<string, string> = {
   'takedown_completed': 'Takedown Completed',
 };
 
+// Define the valid status types that match our database enum
+type ReleaseStatus = 'pending_review' | 'approved' | 'rejected' | 'live' | 'takedown_requested' | 'takedown_completed';
+type FilterType = 'all' | ReleaseStatus;
+
 const CustomerReleases = () => {
   const { user } = useAuth();
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch releases
@@ -54,7 +58,8 @@ const CustomerReleases = () => {
         .order('created_at', { ascending: false });
         
       if (filter !== 'all') {
-        query = query.eq('status', filter);
+        // Now filter is properly typed as FilterType and we ensure we only pass valid status values
+        query = query.eq('status', filter as ReleaseStatus);
       }
       
       const { data, error } = await query;
@@ -91,7 +96,7 @@ const CustomerReleases = () => {
 
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         <div className="w-full md:w-64">
-          <Select value={filter} onValueChange={setFilter}>
+          <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
             <SelectTrigger className="bg-gray-800 border-gray-700">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
