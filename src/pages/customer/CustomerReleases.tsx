@@ -45,7 +45,7 @@ const CustomerReleases = () => {
 
   // Fetch releases
   const { data: releases, isLoading } = useQuery({
-    queryKey: ['releases', user?.id, filter],
+    queryKey: ['releases', user?.id],
     queryFn: async () => {
       let query = supabase
         .from('releases')
@@ -58,7 +58,7 @@ const CustomerReleases = () => {
         .order('created_at', { ascending: false });
         
       if (filter !== 'all') {
-        // Now filter is properly typed as FilterType and we ensure we only pass valid status values
+        // Cast filter to ReleaseStatus to ensure type safety
         query = query.eq('status', filter as ReleaseStatus);
       }
       
@@ -96,7 +96,10 @@ const CustomerReleases = () => {
 
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         <div className="w-full md:w-64">
-          <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
+          <Select 
+            value={filter} 
+            onValueChange={(value) => setFilter(value as FilterType)}
+          >
             <SelectTrigger className="bg-gray-800 border-gray-700">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -164,9 +167,9 @@ const CustomerReleases = () => {
                   </div>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
-                  {release.status === 'rejected' && (
-                    <Badge variant="destructive">
-                      Rejected
+                  {release.status === 'rejected' && release.admin_notes && (
+                    <Badge variant="destructive" className="cursor-pointer" onClick={() => alert(release.admin_notes)}>
+                      View Rejection Reason
                     </Badge>
                   )}
                   {release.status === 'live' && (

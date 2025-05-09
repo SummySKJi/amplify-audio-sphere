@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, PlusCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Define proper types that match our database schema
@@ -63,7 +64,7 @@ const CustomerUpload = () => {
         toast.info("You need to create at least one artist and label before uploading music.", {
           duration: 6000,
           action: {
-            label: "Go to Artists",
+            label: "Create Artist",
             onClick: () => navigate('/dashboard/artists'),
           },
         });
@@ -71,7 +72,7 @@ const CustomerUpload = () => {
         toast.info("You need to create at least one artist before uploading music.", {
           duration: 5000,
           action: {
-            label: "Go to Artists",
+            label: "Create Artist",
             onClick: () => navigate('/dashboard/artists'),
           },
         });
@@ -79,7 +80,7 @@ const CustomerUpload = () => {
         toast.info("You need to create at least one label before uploading music.", {
           duration: 5000,
           action: {
-            label: "Go to Labels",
+            label: "Create Label",
             onClick: () => navigate('/dashboard/labels'),
           },
         });
@@ -214,7 +215,7 @@ const CustomerUpload = () => {
         .from('releases')
         .insert({
           user_id: user.id,
-          type: releaseType as ReleaseType, // Ensure releaseType is the correct enum type
+          type: releaseType as ReleaseType, // Ensure releaseType is correctly cast
           song_name: songName,
           artist_id: artistId,
           instagram_id: instagramId || null,
@@ -262,7 +263,7 @@ const CustomerUpload = () => {
     selectedFile && 
     coverArt && 
     selectedPlatforms.length > 0 &&
-    releaseType;
+    releaseType !== '';
 
   return (
     <div className="space-y-6">
@@ -285,7 +286,7 @@ const CustomerUpload = () => {
               <Label htmlFor="type">Release Type*</Label>
               <Select 
                 value={releaseType} 
-                onValueChange={(value: ReleaseType) => setReleaseType(value)} 
+                onValueChange={(value) => setReleaseType(value as ReleaseType)} 
                 required
               >
                 <SelectTrigger className="bg-gray-900 border-gray-700">
@@ -315,20 +316,33 @@ const CustomerUpload = () => {
             {/* Artist */}
             <div className="space-y-2">
               <Label htmlFor="artist">Artist*</Label>
-              <Select value={artistId} onValueChange={setArtistId} required>
-                <SelectTrigger className="bg-gray-900 border-gray-700">
-                  <SelectValue placeholder="Select artist" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {artists && artists.length > 0 ? (
-                    artists.map((artist: any) => (
-                      <SelectItem key={artist.id} value={artist.id}>{artist.name}</SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-artists" disabled>No artists found</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <Select value={artistId} onValueChange={setArtistId} required>
+                    <SelectTrigger className="bg-gray-900 border-gray-700">
+                      <SelectValue placeholder="Select artist" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {artists && artists.length > 0 ? (
+                        artists.map((artist: any) => (
+                          <SelectItem key={artist.id} value={artist.id}>{artist.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-artists" disabled>No artists found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="outline" 
+                  className="flex-shrink-0"
+                  onClick={() => navigate('/dashboard/artists')}
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </Button>
+              </div>
               <p className="text-sm text-gray-400 mt-1">
                 Don't see your artist? <a href="/dashboard/artists" className="text-primary hover:underline">Create a new artist</a>
               </p>
@@ -414,20 +428,33 @@ const CustomerUpload = () => {
             {/* Label */}
             <div className="space-y-2">
               <Label htmlFor="label">Label*</Label>
-              <Select value={labelId} onValueChange={setLabelId} required>
-                <SelectTrigger className="bg-gray-900 border-gray-700">
-                  <SelectValue placeholder="Select label" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  {labels && labels.length > 0 ? (
-                    labels.map((label: any) => (
-                      <SelectItem key={label.id} value={label.id}>{label.name}</SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="no-labels" disabled>No labels found</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+              <div className="flex space-x-2">
+                <div className="flex-1">
+                  <Select value={labelId} onValueChange={setLabelId} required>
+                    <SelectTrigger className="bg-gray-900 border-gray-700">
+                      <SelectValue placeholder="Select label" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      {labels && labels.length > 0 ? (
+                        labels.map((label: any) => (
+                          <SelectItem key={label.id} value={label.id}>{label.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-labels" disabled>No labels found</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  type="button" 
+                  size="icon" 
+                  variant="outline" 
+                  className="flex-shrink-0"
+                  onClick={() => navigate('/dashboard/labels')}
+                >
+                  <PlusCircle className="h-5 w-5" />
+                </Button>
+              </div>
               <p className="text-sm text-gray-400 mt-1">
                 Don't see your label? <a href="/dashboard/labels" className="text-primary hover:underline">Create a new label</a>
               </p>
@@ -499,7 +526,7 @@ const CustomerUpload = () => {
                   id="selectAll"
                   className="rounded text-primary-foreground bg-gray-700 border-gray-600" 
                   onChange={handleSelectAllPlatforms} 
-                  checked={selectedPlatforms.length > 0 && selectedPlatforms.length === platforms?.length}
+                  checked={platforms && selectedPlatforms.length > 0 && selectedPlatforms.length === platforms.length}
                 />
                 <label htmlFor="selectAll" className="text-sm font-medium">Select All</label>
               </div>

@@ -21,13 +21,13 @@ const Dashboard = () => {
 
   // Fetch releases
   const { data: releases, isLoading: releasesLoading } = useQuery({
-    queryKey: ['releases'],
+    queryKey: ['releases', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('releases')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .select('*, artists:artist_id (name), labels:label_id (name)')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];
@@ -37,7 +37,7 @@ const Dashboard = () => {
 
   // Fetch wallet
   const { data: wallet, isLoading: walletLoading } = useQuery({
-    queryKey: ['wallet'],
+    queryKey: ['wallet', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('wallets')
@@ -227,10 +227,27 @@ const Dashboard = () => {
             {releases && releases.length > 0 ? (
               releases.slice(0, 3).map((release) => (
                 <div key={release.id} className="flex items-start gap-4 border-b border-gray-700 pb-4">
-                  <div className="ml-2">
-                    <p className="text-sm font-medium text-white">{release.status === 'pending_review' ? 'New release pending review' : 'Release status updated'}</p>
-                    <p className="text-xs text-gray-400">Your song "{release.song_name}" is {release.status.replace('_', ' ')}</p>
+                  <div className="ml-2 flex-1">
+                    <p className="text-sm font-medium text-white">
+                      {release.status === 'pending_review' ? 'New release pending review' : 
+                      release.status === 'approved' ? 'Release approved' : 
+                      release.status === 'rejected' ? 'Release rejected' : 
+                      release.status === 'live' ? 'Release now live' : 'Release status updated'}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Your song "{release.song_name}" by {release.artists?.name || 'Unknown'} is {release.status.replace('_', ' ')}
+                    </p>
                     <p className="text-xs text-gray-500 mt-1">{new Date(release.created_at).toLocaleString()}</p>
+                  </div>
+                  <div className="w-12 h-12 flex-shrink-0">
+                    <img 
+                      src={release.cover_art_url}
+                      alt={release.song_name}
+                      className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://placehold.co/100x100/333/white?text=NA";
+                      }}
+                    />
                   </div>
                 </div>
               ))
