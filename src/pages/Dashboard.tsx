@@ -1,21 +1,27 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Music, Upload, Wallet, FileDown, Youtube } from "lucide-react";
+import { Loader2, Music, Upload, Wallet, FileDown, Youtube, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const { user, profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
+    // Check authentication status
     if (!user) {
+      toast.error("Please log in to access the dashboard");
       navigate("/auth");
+    } else {
+      setAuthChecked(true);
     }
   }, [user, navigate]);
 
@@ -23,32 +29,36 @@ const Dashboard = () => {
   const { data: releases, isLoading: releasesLoading } = useQuery({
     queryKey: ['releases', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase
         .from('releases')
         .select('*, artists:artist_id (name), labels:label_id (name)')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user
+    enabled: !!user?.id && authChecked
   });
 
   // Fetch wallet
   const { data: wallet, isLoading: walletLoading } = useQuery({
     queryKey: ['wallet', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase
         .from('wallets')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
       return data || { balance: 0 };
     },
-    enabled: !!user
+    enabled: !!user?.id && authChecked
   });
 
   // Mock data for charts
@@ -93,6 +103,20 @@ const Dashboard = () => {
       path: "/dashboard/copyright-removal",
     },
   ];
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="flex items-center text-amber-500 bg-amber-100 dark:bg-amber-900/30 px-4 py-2 rounded-md">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          <p>Authentication required. Please log in to continue.</p>
+        </div>
+        <Button onClick={() => navigate("/auth")}>
+          Go to Login
+        </Button>
+      </div>
+    );
+  }
 
   if (releasesLoading || walletLoading) {
     return (

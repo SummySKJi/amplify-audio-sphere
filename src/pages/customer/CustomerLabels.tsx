@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Trash, Loader2 } from "lucide-react";
+import { Edit, Trash, Loader2, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const countries = [
   'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
@@ -30,10 +31,12 @@ const genres = [
 
 const CustomerLabels = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('list');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [authChecked, setAuthChecked] = useState(false);
   
   // Label form fields
   const [name, setName] = useState('');
@@ -46,20 +49,32 @@ const CustomerLabels = () => {
   const [facebook, setFacebook] = useState('');
   const [youtube, setYoutube] = useState('');
   const [bio, setBio] = useState('');
+  
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!user) {
+      toast.error("You must be logged in to access this page");
+      navigate("/auth");
+    } else {
+      setAuthChecked(true);
+    }
+  }, [user, navigate]);
 
   // Fetch labels
   const { data: labels, isLoading, refetch } = useQuery({
     queryKey: ['labels', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase
         .from('labels')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user
+    enabled: !!user?.id && authChecked
   });
 
   // Handle language selection
@@ -94,8 +109,9 @@ const CustomerLabels = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!user || !user.id) {
       toast.error('You must be logged in to create a label');
+      navigate("/auth");
       return;
     }
     
@@ -107,6 +123,9 @@ const CustomerLabels = () => {
     setIsSubmitting(true);
     
     try {
+      // Ensure user is authenticated with a valid ID
+      console.log("Creating label with user_id:", user.id);
+      
       const { error } = await supabase
         .from('labels')
         .insert({
@@ -125,14 +144,22 @@ const CustomerLabels = () => {
           bio: bio || null
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Label creation error details:', error);
+        
+        if (error.message.includes('foreign key constraint')) {
+          toast.error("Authentication error. Please log out and log in again before creating labels.");
+        } else {
+          toast.error(`Error creating label: ${error.message}`);
+        }
+        throw error;
+      }
       
       toast.success('Label created successfully!');
       resetForm();
       setActiveTab('list');
       refetch(); // Refresh labels list
     } catch (error: any) {
-      toast.error(`Error creating label: ${error.message}`);
       console.error('Error creating label:', error);
     } finally {
       setIsSubmitting(false);
@@ -161,6 +188,20 @@ const CustomerLabels = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="flex items-center text-amber-500 bg-amber-100 dark:bg-amber-900/30 px-4 py-2 rounded-md">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          <p>Authentication required. Please log in to continue.</p>
+        </div>
+        <Button onClick={() => navigate("/auth")}>
+          Go to Login
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -173,7 +214,7 @@ const CustomerLabels = () => {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold">Labels Management</h2>
-        <p className="text-gray-400">Create and manage your music labels</p>
+        <p className="text-gray-400">Create and manage your music label profiles</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -193,7 +234,7 @@ const CustomerLabels = () => {
                       <div className="flex space-x-2">
                         <Button 
                           variant="ghost" 
-                          size="icon"
+                          size="icon" 
                           onClick={() => handleDeleteLabel(label.id)}
                         >
                           <Trash className="h-4 w-4" />
@@ -210,6 +251,10 @@ const CustomerLabels = () => {
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">Phone:</span>
                         <span className="text-sm">{label.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">WhatsApp:</span>
+                        <span className="text-sm">{label.whatsapp}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-400">Country:</span>
@@ -246,7 +291,7 @@ const CustomerLabels = () => {
             ) : (
               <div className="col-span-2 text-center py-8 bg-gray-800 border border-gray-700 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-300">No labels created yet</h3>
-                <p className="text-gray-400 mt-2">Click on "Add Label" to create your first label</p>
+                <p className="text-gray-400 mt-2">Click on "Add Label" to create your first label profile</p>
                 <Button className="mt-4" onClick={() => setActiveTab('add')}>
                   Add Label
                 </Button>
@@ -260,7 +305,7 @@ const CustomerLabels = () => {
             <CardHeader>
               <CardTitle className="text-white">Add New Label</CardTitle>
               <CardDescription className="text-gray-400">
-                Create a new music label with detailed information
+                Create a new music label profile with detailed information
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -304,27 +349,29 @@ const CustomerLabels = () => {
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp">WhatsApp Number*</Label>
-                  <Input 
-                    id="whatsapp"
-                    placeholder="+91 98765 43210"
-                    className="bg-gray-900 border-gray-700"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    required
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input 
-                    id="website"
-                    placeholder="https://www.labelwebsite.com"
-                    className="bg-gray-900 border-gray-700"
-                    value={website}
-                    onChange={(e) => setWebsite(e.target.value)}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp">WhatsApp Number*</Label>
+                    <Input 
+                      id="whatsapp"
+                      placeholder="+91 98765 43210"
+                      className="bg-gray-900 border-gray-700"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="website">Website</Label>
+                    <Input 
+                      id="website"
+                      placeholder="https://www.labelwebsite.com"
+                      className="bg-gray-900 border-gray-700"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
+                    />
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

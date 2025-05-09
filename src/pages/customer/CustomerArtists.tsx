@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Edit, Trash, Loader2 } from "lucide-react";
+import { Edit, Trash, Loader2, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const countries = [
   'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
@@ -30,10 +31,12 @@ const genres = [
 
 const CustomerArtists = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('list');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const [authChecked, setAuthChecked] = useState(false);
   
   // Artist form fields
   const [name, setName] = useState('');
@@ -50,19 +53,31 @@ const CustomerArtists = () => {
   const [appleMusic, setAppleMusic] = useState('');
   const [bio, setBio] = useState('');
   
+  // Check if user is authenticated
+  useEffect(() => {
+    if (!user) {
+      toast.error("You must be logged in to access this page");
+      navigate("/auth");
+    } else {
+      setAuthChecked(true);
+    }
+  }, [user, navigate]);
+
   // Fetch artists
   const { data: artists, isLoading, refetch } = useQuery({
     queryKey: ['artists', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error("User not authenticated");
+      
       const { data, error } = await supabase
         .from('artists')
         .select('*')
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
       
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user
+    enabled: !!user?.id && authChecked
   });
 
   // Handle language selection
@@ -100,8 +115,9 @@ const CustomerArtists = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!user || !user.id) {
       toast.error('You must be logged in to create an artist');
+      navigate("/auth");
       return;
     }
     
@@ -113,6 +129,9 @@ const CustomerArtists = () => {
     setIsSubmitting(true);
     
     try {
+      // Ensure user is authenticated with a valid ID
+      console.log("Creating artist with user_id:", user.id);
+      
       const { error } = await supabase
         .from('artists')
         .insert({
@@ -134,14 +153,22 @@ const CustomerArtists = () => {
           bio: bio || null
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Artist creation error details:', error);
+        
+        if (error.message.includes('foreign key constraint')) {
+          toast.error("Authentication error. Please log out and log in again before creating artists.");
+        } else {
+          toast.error(`Error creating artist: ${error.message}`);
+        }
+        throw error;
+      }
       
       toast.success('Artist created successfully!');
       resetForm();
       setActiveTab('list');
       refetch(); // Refresh artists list
     } catch (error: any) {
-      toast.error(`Error creating artist: ${error.message}`);
       console.error('Error creating artist:', error);
     } finally {
       setIsSubmitting(false);
@@ -169,6 +196,20 @@ const CustomerArtists = () => {
       console.error('Error deleting artist:', error);
     }
   };
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <div className="flex items-center text-amber-500 bg-amber-100 dark:bg-amber-900/30 px-4 py-2 rounded-md">
+          <AlertCircle className="h-5 w-5 mr-2" />
+          <p>Authentication required. Please log in to continue.</p>
+        </div>
+        <Button onClick={() => navigate("/auth")}>
+          Go to Login
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
