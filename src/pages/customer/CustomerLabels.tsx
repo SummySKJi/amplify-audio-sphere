@@ -8,34 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Edit, Trash } from "lucide-react";
-
-const mockLabels = [
-  {
-    id: '1',
-    name: 'Indie Records',
-    email: 'info@indierecords.com',
-    phone: '+91 98765 43210',
-    whatsapp: '+91 98765 43210',
-    country: 'India',
-    languages: ['Hindi', 'English'],
-    genres: ['Pop', 'Rock', 'Indie'],
-    instagram: 'indierecords',
-    website: 'https://indierecords.com',
-  },
-  {
-    id: '2',
-    name: 'Rhythm Productions',
-    email: 'contact@rhythm.com',
-    phone: '+91 98765 12345',
-    whatsapp: '+91 98765 12345',
-    country: 'India',
-    languages: ['Hindi', 'Punjabi', 'English'],
-    genres: ['Hip-Hop', 'EDM'],
-    instagram: 'rhythm_prod',
-    website: null,
-  },
-];
+import { Trash, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const countries = [
   'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
@@ -53,21 +29,145 @@ const genres = [
 ];
 
 const CustomerLabels = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('list');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  
+  // Label form fields
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [website, setWebsite] = useState('');
+  const [country, setCountry] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [youtube, setYoutube] = useState('');
+  const [bio, setBio] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch labels
+  const { data: labels, isLoading, refetch } = useQuery({
+    queryKey: ['labels', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('labels')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user
+  });
+
+  // Handle language selection
+  const handleLanguageSelect = (value: string) => {
+    if (!selectedLanguages.includes(value)) {
+      setSelectedLanguages([...selectedLanguages, value]);
+    }
+  };
+
+  // Handle genre selection
+  const handleGenreSelect = (value: string) => {
+    if (!selectedGenres.includes(value)) {
+      setSelectedGenres([...selectedGenres, value]);
+    }
+  };
+
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setWhatsapp('');
+    setWebsite('');
+    setCountry('');
+    setInstagram('');
+    setFacebook('');
+    setYoutube('');
+    setBio('');
+    setSelectedLanguages([]);
+    setSelectedGenres([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error('You must be logged in to create a label');
+      return;
+    }
+    
+    if (!name || !email || !phone || !whatsapp || !country || selectedLanguages.length === 0) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('labels')
+        .insert({
+          user_id: user.id,
+          name,
+          email,
+          phone,
+          whatsapp,
+          website: website || null,
+          country,
+          languages: selectedLanguages,
+          genres: selectedGenres.length > 0 ? selectedGenres : null,
+          instagram_id: instagram || null,
+          facebook_page: facebook || null,
+          youtube_channel: youtube || null,
+          bio: bio || null
+        });
+      
+      if (error) throw error;
+      
       toast.success('Label created successfully!');
-      setIsSubmitting(false);
+      resetForm();
       setActiveTab('list');
-    }, 1500);
+      refetch(); // Refresh labels list
+    } catch (error: any) {
+      toast.error(`Error creating label: ${error.message}`);
+      console.error('Error creating label:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const handleDeleteLabel = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this label?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('labels')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      
+      toast.success('Label deleted successfully!');
+      refetch(); // Refresh labels list
+    } catch (error: any) {
+      toast.error(`Error deleting label: ${error.message}`);
+      console.error('Error deleting label:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -84,63 +184,66 @@ const CustomerLabels = () => {
         
         <TabsContent value="list">
           <div className="grid gap-6 md:grid-cols-2">
-            {mockLabels.map((label) => (
-              <Card key={label.id} className="bg-gray-800 border-gray-700">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-white text-lg">{label.name}</CardTitle>
-                    <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Email:</span>
-                      <span className="text-sm">{label.email}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Phone:</span>
-                      <span className="text-sm">{label.phone}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Country:</span>
-                      <span className="text-sm">{label.country}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Languages:</span>
-                      <span className="text-sm">{label.languages.join(', ')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Genres:</span>
-                      <span className="text-sm">{label.genres?.join(', ') || 'None'}</span>
-                    </div>
-                    {label.instagram && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-400">Instagram:</span>
-                        <span className="text-sm">@{label.instagram}</span>
+            {labels && labels.length > 0 ? (
+              labels.map((label: any) => (
+                <Card key={label.id} className="bg-gray-800 border-gray-700">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-white text-lg">{label.name}</CardTitle>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleDeleteLabel(label.id)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-                    {label.website && (
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-400">Website:</span>
-                        <a href={label.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
-                          Visit Website
-                        </a>
+                        <span className="text-sm text-gray-400">Email:</span>
+                        <span className="text-sm">{label.email}</span>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {mockLabels.length === 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Phone:</span>
+                        <span className="text-sm">{label.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Country:</span>
+                        <span className="text-sm">{label.country}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Languages:</span>
+                        <span className="text-sm">{label.languages?.join(', ') || 'None'}</span>
+                      </div>
+                      {label.genres && label.genres.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Genres:</span>
+                          <span className="text-sm">{label.genres.join(', ')}</span>
+                        </div>
+                      )}
+                      {label.instagram_id && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Instagram:</span>
+                          <span className="text-sm">@{label.instagram_id}</span>
+                        </div>
+                      )}
+                      {label.website && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Website:</span>
+                          <a href={label.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                            Visit Website
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
               <div className="col-span-2 text-center py-8 bg-gray-800 border border-gray-700 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-300">No labels created yet</h3>
                 <p className="text-gray-400 mt-2">Click on "Add Label" to create your first label</p>
@@ -168,6 +271,8 @@ const CustomerLabels = () => {
                     id="name"
                     placeholder="Enter label name"
                     className="bg-gray-900 border-gray-700"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
@@ -180,6 +285,8 @@ const CustomerLabels = () => {
                       type="email"
                       placeholder="label@example.com"
                       className="bg-gray-900 border-gray-700"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -190,6 +297,8 @@ const CustomerLabels = () => {
                       id="phone"
                       placeholder="+91 98765 43210"
                       className="bg-gray-900 border-gray-700"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       required
                     />
                   </div>
@@ -201,6 +310,8 @@ const CustomerLabels = () => {
                     id="whatsapp"
                     placeholder="+91 98765 43210"
                     className="bg-gray-900 border-gray-700"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
                     required
                   />
                 </div>
@@ -211,6 +322,8 @@ const CustomerLabels = () => {
                     id="website"
                     placeholder="https://www.labelwebsite.com"
                     className="bg-gray-900 border-gray-700"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
                   />
                 </div>
                 
@@ -221,6 +334,8 @@ const CustomerLabels = () => {
                       id="youtube"
                       placeholder="YouTube channel link"
                       className="bg-gray-900 border-gray-700"
+                      value={youtube}
+                      onChange={(e) => setYoutube(e.target.value)}
                     />
                   </div>
                   
@@ -230,6 +345,8 @@ const CustomerLabels = () => {
                       id="instagram"
                       placeholder="Instagram username (without @)"
                       className="bg-gray-900 border-gray-700"
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
                     />
                   </div>
                   
@@ -239,19 +356,21 @@ const CustomerLabels = () => {
                       id="facebook"
                       placeholder="Facebook page link"
                       className="bg-gray-900 border-gray-700"
+                      value={facebook}
+                      onChange={(e) => setFacebook(e.target.value)}
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="country">Country*</Label>
-                  <Select required>
+                  <Select value={country} onValueChange={setCountry} required>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {countries.map((country) => (
-                        <SelectItem key={country} value={country.toLowerCase()}>{country}</SelectItem>
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -259,13 +378,13 @@ const CustomerLabels = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="languages">Languages*</Label>
-                  <Select>
+                  <Select onValueChange={handleLanguageSelect}>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select languages" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {languages.map((language) => (
-                        <SelectItem key={language} value={language.toLowerCase()}>{language}</SelectItem>
+                        <SelectItem key={language} value={language}>{language}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -287,13 +406,13 @@ const CustomerLabels = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="genres">Genres</Label>
-                  <Select>
+                  <Select onValueChange={handleGenreSelect}>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select genres" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {genres.map((genre) => (
-                        <SelectItem key={genre} value={genre.toLowerCase()}>{genre}</SelectItem>
+                        <SelectItem key={genre} value={genre}>{genre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -319,6 +438,8 @@ const CustomerLabels = () => {
                     id="bio"
                     placeholder="Write a short description for the label"
                     className="bg-gray-900 border-gray-700 min-h-24"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
                   />
                 </div>
                 
@@ -327,7 +448,12 @@ const CustomerLabels = () => {
                   className="w-full mt-2"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Saving...' : 'Save Label'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Save Label'}
                 </Button>
               </form>
             </CardContent>

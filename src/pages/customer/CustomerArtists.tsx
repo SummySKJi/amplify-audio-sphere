@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,36 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Edit, Trash } from "lucide-react";
-
-const mockArtists = [
-  {
-    id: '1',
-    name: 'DJ Sunshine',
-    email: 'dj@sunshine.com',
-    phone: '+91 98765 43210',
-    whatsapp: '+91 98765 43210',
-    gender: 'male',
-    country: 'India',
-    languages: ['Hindi', 'English'],
-    genres: ['EDM', 'Pop'],
-    instagram: 'djsunshine',
-    website: 'https://djsunshine.com',
-  },
-  {
-    id: '2',
-    name: 'Luna Moon',
-    email: 'luna@moon.com',
-    phone: '+91 98765 12345',
-    whatsapp: '+91 98765 12345',
-    gender: 'female',
-    country: 'India',
-    languages: ['Hindi', 'Punjabi'],
-    genres: ['Pop', 'Folk'],
-    instagram: 'lunamoonmusic',
-    website: null,
-  },
-];
+import { Edit, Trash, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const countries = [
   'India', 'United States', 'United Kingdom', 'Canada', 'Australia',
@@ -55,21 +29,154 @@ const genres = [
 ];
 
 const CustomerArtists = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('list');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  
+  // Artist form fields
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | ''>('');
+  const [website, setWebsite] = useState('');
+  const [country, setCountry] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [facebook, setFacebook] = useState('');
+  const [youtube, setYoutube] = useState('');
+  const [spotify, setSpotify] = useState('');
+  const [appleMusic, setAppleMusic] = useState('');
+  const [bio, setBio] = useState('');
+  
+  // Fetch artists
+  const { data: artists, isLoading, refetch } = useQuery({
+    queryKey: ['artists', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('artists')
+        .select('*')
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle language selection
+  const handleLanguageSelect = (value: string) => {
+    if (!selectedLanguages.includes(value)) {
+      setSelectedLanguages([...selectedLanguages, value]);
+    }
+  };
+
+  // Handle genre selection
+  const handleGenreSelect = (value: string) => {
+    if (!selectedGenres.includes(value)) {
+      setSelectedGenres([...selectedGenres, value]);
+    }
+  };
+
+  const resetForm = () => {
+    setName('');
+    setEmail('');
+    setPhone('');
+    setWhatsapp('');
+    setGender('');
+    setWebsite('');
+    setCountry('');
+    setInstagram('');
+    setFacebook('');
+    setYoutube('');
+    setSpotify('');
+    setAppleMusic('');
+    setBio('');
+    setSelectedLanguages([]);
+    setSelectedGenres([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error('You must be logged in to create an artist');
+      return;
+    }
+    
+    if (!name || !email || !phone || !whatsapp || !gender || !country || selectedLanguages.length === 0) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    
     setIsSubmitting(true);
     
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('artists')
+        .insert({
+          user_id: user.id,
+          name,
+          email,
+          phone,
+          whatsapp,
+          gender,
+          website: website || null,
+          country,
+          languages: selectedLanguages,
+          genres: selectedGenres.length > 0 ? selectedGenres : null,
+          instagram_id: instagram || null,
+          facebook_page: facebook || null,
+          youtube_channel: youtube || null,
+          spotify_link: spotify || null,
+          apple_music_link: appleMusic || null,
+          bio: bio || null
+        });
+      
+      if (error) throw error;
+      
       toast.success('Artist created successfully!');
-      setIsSubmitting(false);
+      resetForm();
       setActiveTab('list');
-    }, 1500);
+      refetch(); // Refresh artists list
+    } catch (error: any) {
+      toast.error(`Error creating artist: ${error.message}`);
+      console.error('Error creating artist:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  const handleDeleteArtist = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this artist?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('artists')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user?.id);
+      
+      if (error) throw error;
+      
+      toast.success('Artist deleted successfully!');
+      refetch(); // Refresh artists list
+    } catch (error: any) {
+      toast.error(`Error deleting artist: ${error.message}`);
+      console.error('Error deleting artist:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -86,63 +193,70 @@ const CustomerArtists = () => {
         
         <TabsContent value="list">
           <div className="grid gap-6 md:grid-cols-2">
-            {mockArtists.map((artist) => (
-              <Card key={artist.id} className="bg-gray-800 border-gray-700">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-white text-lg">{artist.name}</CardTitle>
-                    <div className="flex space-x-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon">
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Email:</span>
-                      <span className="text-sm">{artist.email}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Phone:</span>
-                      <span className="text-sm">{artist.phone}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Country:</span>
-                      <span className="text-sm">{artist.country}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Languages:</span>
-                      <span className="text-sm">{artist.languages.join(', ')}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-400">Genres:</span>
-                      <span className="text-sm">{artist.genres?.join(', ') || 'None'}</span>
-                    </div>
-                    {artist.instagram && (
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-400">Instagram:</span>
-                        <span className="text-sm">@{artist.instagram}</span>
+            {artists && artists.length > 0 ? (
+              artists.map((artist: any) => (
+                <Card key={artist.id} className="bg-gray-800 border-gray-700">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-start">
+                      <CardTitle className="text-white text-lg">{artist.name}</CardTitle>
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleDeleteArtist(artist.id)}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
                       </div>
-                    )}
-                    {artist.website && (
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-2">
                       <div className="flex justify-between">
-                        <span className="text-sm text-gray-400">Website:</span>
-                        <a href={artist.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
-                          Visit Website
-                        </a>
+                        <span className="text-sm text-gray-400">Email:</span>
+                        <span className="text-sm">{artist.email}</span>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {mockArtists.length === 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Phone:</span>
+                        <span className="text-sm">{artist.phone}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Gender:</span>
+                        <span className="text-sm capitalize">{artist.gender}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Country:</span>
+                        <span className="text-sm">{artist.country}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-400">Languages:</span>
+                        <span className="text-sm">{artist.languages?.join(', ') || 'None'}</span>
+                      </div>
+                      {artist.genres && artist.genres.length > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Genres:</span>
+                          <span className="text-sm">{artist.genres.join(', ')}</span>
+                        </div>
+                      )}
+                      {artist.instagram_id && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Instagram:</span>
+                          <span className="text-sm">@{artist.instagram_id}</span>
+                        </div>
+                      )}
+                      {artist.website && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-gray-400">Website:</span>
+                          <a href={artist.website} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
+                            Visit Website
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
               <div className="col-span-2 text-center py-8 bg-gray-800 border border-gray-700 rounded-lg">
                 <h3 className="text-lg font-medium text-gray-300">No artists created yet</h3>
                 <p className="text-gray-400 mt-2">Click on "Add Artist" to create your first artist profile</p>
@@ -170,6 +284,8 @@ const CustomerArtists = () => {
                     id="name"
                     placeholder="Enter artist name"
                     className="bg-gray-900 border-gray-700"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
@@ -182,6 +298,8 @@ const CustomerArtists = () => {
                       type="email"
                       placeholder="artist@example.com"
                       className="bg-gray-900 border-gray-700"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -192,6 +310,8 @@ const CustomerArtists = () => {
                       id="phone"
                       placeholder="+91 98765 43210"
                       className="bg-gray-900 border-gray-700"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       required
                     />
                   </div>
@@ -204,13 +324,15 @@ const CustomerArtists = () => {
                       id="whatsapp"
                       placeholder="+91 98765 43210"
                       className="bg-gray-900 border-gray-700"
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
                       required
                     />
                   </div>
                   
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender*</Label>
-                    <Select required>
+                    <Select value={gender} onValueChange={(value: 'male' | 'female' | 'other') => setGender(value)} required>
                       <SelectTrigger className="bg-gray-900 border-gray-700">
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
@@ -229,6 +351,8 @@ const CustomerArtists = () => {
                     id="website"
                     placeholder="https://www.artistwebsite.com"
                     className="bg-gray-900 border-gray-700"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
                   />
                 </div>
                 
@@ -239,6 +363,8 @@ const CustomerArtists = () => {
                       id="youtube"
                       placeholder="YouTube channel link"
                       className="bg-gray-900 border-gray-700"
+                      value={youtube}
+                      onChange={(e) => setYoutube(e.target.value)}
                     />
                   </div>
                   
@@ -248,6 +374,8 @@ const CustomerArtists = () => {
                       id="instagram"
                       placeholder="Instagram username (without @)"
                       className="bg-gray-900 border-gray-700"
+                      value={instagram}
+                      onChange={(e) => setInstagram(e.target.value)}
                     />
                   </div>
                   
@@ -257,6 +385,8 @@ const CustomerArtists = () => {
                       id="facebook"
                       placeholder="Facebook page link"
                       className="bg-gray-900 border-gray-700"
+                      value={facebook}
+                      onChange={(e) => setFacebook(e.target.value)}
                     />
                   </div>
                 </div>
@@ -268,6 +398,8 @@ const CustomerArtists = () => {
                       id="spotify"
                       placeholder="Spotify artist profile link"
                       className="bg-gray-900 border-gray-700"
+                      value={spotify}
+                      onChange={(e) => setSpotify(e.target.value)}
                     />
                   </div>
                   
@@ -277,19 +409,21 @@ const CustomerArtists = () => {
                       id="apple"
                       placeholder="Apple Music artist profile link"
                       className="bg-gray-900 border-gray-700"
+                      value={appleMusic}
+                      onChange={(e) => setAppleMusic(e.target.value)}
                     />
                   </div>
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="country">Country*</Label>
-                  <Select required>
+                  <Select value={country} onValueChange={setCountry} required>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {countries.map((country) => (
-                        <SelectItem key={country} value={country.toLowerCase()}>{country}</SelectItem>
+                        <SelectItem key={country} value={country}>{country}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -297,13 +431,13 @@ const CustomerArtists = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="languages">Languages*</Label>
-                  <Select>
+                  <Select onValueChange={handleLanguageSelect}>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select languages" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {languages.map((language) => (
-                        <SelectItem key={language} value={language.toLowerCase()}>{language}</SelectItem>
+                        <SelectItem key={language} value={language}>{language}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -325,13 +459,13 @@ const CustomerArtists = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="genres">Genres</Label>
-                  <Select>
+                  <Select onValueChange={handleGenreSelect}>
                     <SelectTrigger className="bg-gray-900 border-gray-700">
                       <SelectValue placeholder="Select genres" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
                       {genres.map((genre) => (
-                        <SelectItem key={genre} value={genre.toLowerCase()}>{genre}</SelectItem>
+                        <SelectItem key={genre} value={genre}>{genre}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -357,6 +491,8 @@ const CustomerArtists = () => {
                     id="bio"
                     placeholder="Write a short biography for the artist"
                     className="bg-gray-900 border-gray-700 min-h-24"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
                   />
                 </div>
                 
@@ -365,7 +501,12 @@ const CustomerArtists = () => {
                   className="w-full mt-2"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting ? 'Saving...' : 'Save Artist'}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Save Artist'}
                 </Button>
               </form>
             </CardContent>
