@@ -33,11 +33,25 @@ const AdminAuth = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
+    
     try {
+      // Log the attempt
+      console.log('Attempting admin login with:', formData.email);
+      
+      // Clean up existing auth state
+      localStorage.removeItem('supabase.auth.token');
+      // Remove all Supabase auth keys from localStorage
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Attempt sign in
       await signIn(formData.email, formData.password);
+      toast.success("Admin login successful!");
       // Auth context will redirect to dashboard if login is successful and user is admin
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
       toast.error("Admin login failed. Please check your credentials and try again.");
     } finally {
@@ -70,7 +84,7 @@ const AdminAuth = () => {
                   required
                   placeholder="Admin Email"
                   className="flex-grow border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  disabled={true} // Make email read-only
+                  readOnly // Make email read-only but not visually disabled
                 />
                 <User className="text-gray-400 h-5 w-5" />
               </div>

@@ -60,8 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      console.log("Profile data:", data);
       setProfile(data);
       setIsAdmin(data.role === "admin");
+      console.log("Is admin:", data.role === "admin");
     } catch (error) {
       console.error("Error in profile fetch:", error);
     }
@@ -78,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log("Auth state change event:", event);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -119,17 +122,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Continue even if this fails
       }
       
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      console.log("Signing in with:", email, "Admin email match:", email === 'musicdistributionindia.in@gmail.com');
+      
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
+        console.error("Sign in error:", error);
         toast.error(error.message);
-        return;
+        throw error;
+      }
+
+      console.log("Sign in successful:", data);
+      
+      // Check if this is the admin account immediately after login
+      if (data.user && email === 'musicdistributionindia.in@gmail.com') {
+        console.log("Admin login detected");
+        // Fetch profile to confirm admin status
+        const { data: profileData, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single();
+          
+        if (profileError) {
+          console.error("Error fetching admin profile:", profileError);
+        } else {
+          console.log("Admin profile:", profileData);
+          if (profileData.role !== 'admin') {
+            // Update the profile to ensure this account is set as admin
+            const { error: updateError } = await supabase
+              .from("profiles")
+              .update({ role: 'admin' })
+              .eq("id", data.user.id);
+              
+            if (updateError) {
+              console.error("Error updating admin role:", updateError);
+            } else {
+              console.log("Admin role set successfully");
+            }
+          }
+        }
       }
 
       toast.success('Signed in successfully!');
       navigate('/dashboard');
     } catch (error: any) {
+      console.error("Sign in catch error:", error);
       toast.error(error.message || 'Failed to sign in');
+      throw error;
     }
   };
 

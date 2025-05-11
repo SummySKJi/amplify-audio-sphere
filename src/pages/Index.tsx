@@ -11,9 +11,19 @@ import ContactForm from "@/components/ContactForm";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  
+  useEffect(() => {
+    // Clear any admin login errors on homepage load
+    const adminLoginError = sessionStorage.getItem('adminLoginError');
+    if (adminLoginError) {
+      toast.error(adminLoginError);
+      sessionStorage.removeItem('adminLoginError');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black to-gray-900">

@@ -3,9 +3,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
@@ -30,12 +32,20 @@ const Navbar = () => {
             <Link to="/admin">
               <Button variant="ghost" className="text-gray-400 hover:text-white text-sm">Admin</Button>
             </Link>
-            <Link to="/auth?mode=login">
-              <Button variant="outline" className="rounded-full border-white/10 hover:bg-white/5">Login</Button>
-            </Link>
-            <Link to="/auth?mode=signup">
-              <Button className="btn-primary">Get Started</Button>
-            </Link>
+            {!user ? (
+              <>
+                <Link to="/auth?mode=login">
+                  <Button variant="outline" className="rounded-full border-white/10 hover:bg-white/5">Login</Button>
+                </Link>
+                <Link to="/auth?mode=signup">
+                  <Button className="btn-primary">Get Started</Button>
+                </Link>
+              </>
+            ) : (
+              <Link to="/dashboard">
+                <Button className="btn-primary">Dashboard</Button>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Toggle */}
@@ -61,12 +71,20 @@ const Navbar = () => {
               <Link to="/#contact" className="text-white py-2 hover:text-brand-purple" onClick={toggleMenu}>Contact</Link>
               <Link to="/admin" className="text-gray-400 py-2 hover:text-brand-purple" onClick={toggleMenu}>Admin</Link>
               <div className="pt-4 flex flex-col space-y-3">
-                <Link to="/auth?mode=login" className="w-full">
-                  <Button variant="outline" className="w-full border-white/10">Login</Button>
-                </Link>
-                <Link to="/auth?mode=signup" className="w-full">
-                  <Button className="btn-primary w-full">Get Started</Button>
-                </Link>
+                {!user ? (
+                  <>
+                    <Link to="/auth?mode=login" className="w-full">
+                      <Button variant="outline" className="w-full border-white/10">Login</Button>
+                    </Link>
+                    <Link to="/auth?mode=signup" className="w-full">
+                      <Button className="btn-primary w-full">Get Started</Button>
+                    </Link>
+                  </>
+                ) : (
+                  <Link to="/dashboard" className="w-full">
+                    <Button className="btn-primary w-full">Dashboard</Button>
+                  </Link>
+                )}
               </div>
             </div>
           </div>
