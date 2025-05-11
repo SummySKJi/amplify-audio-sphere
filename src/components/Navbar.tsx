@@ -27,6 +27,9 @@ const Navbar = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
+            <Link to="/admin">
+              <Button variant="ghost" className="text-gray-400 hover:text-white text-sm">Admin</Button>
+            </Link>
             <Link to="/auth?mode=login">
               <Button variant="outline" className="rounded-full border-white/10 hover:bg-white/5">Login</Button>
             </Link>
@@ -56,6 +59,7 @@ const Navbar = () => {
               <Link to="/#platforms" className="text-white py-2 hover:text-brand-purple" onClick={toggleMenu}>Platforms</Link>
               <Link to="/#pricing" className="text-white py-2 hover:text-brand-purple" onClick={toggleMenu}>Pricing</Link>
               <Link to="/#contact" className="text-white py-2 hover:text-brand-purple" onClick={toggleMenu}>Contact</Link>
+              <Link to="/admin" className="text-gray-400 py-2 hover:text-brand-purple" onClick={toggleMenu}>Admin</Link>
               <div className="pt-4 flex flex-col space-y-3">
                 <Link to="/auth?mode=login" className="w-full">
                   <Button variant="outline" className="w-full border-white/10">Login</Button>
