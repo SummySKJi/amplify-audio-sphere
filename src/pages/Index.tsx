@@ -10,7 +10,6 @@ import Platforms from "@/components/Platforms";
 import ContactForm from "@/components/ContactForm";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
-import { useState } from "react";
 import { toast } from "sonner";
 
 const Index = () => {
