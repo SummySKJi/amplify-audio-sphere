@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, BankIcon, Wallet } from "lucide-react";
+import { CheckCircle2, Loader2, Banknote, Wallet } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -40,7 +40,7 @@ const AdminPayouts = () => {
     userId: '',
     amount: '',
     description: '',
-    operation: 'add' // 'add' or 'subtract'
+    operation: 'add' as 'add' | 'subtract' // Fixed type to match allowed values
   });
   
   // Fetch all withdrawal requests
@@ -105,7 +105,7 @@ const AdminPayouts = () => {
 
   // Update withdrawal request status mutation
   const updateWithdrawalMutation = useMutation({
-    mutationFn: async ({ id, status, notes }: { id: string, status: string, notes: string }) => {
+    mutationFn: async ({ id, status, notes }: { id: string, status: 'pending' | 'processing' | 'completed' | 'rejected', notes: string }) => {
       const { data, error } = await supabase
         .from('withdrawal_requests')
         .update({ 
@@ -170,7 +170,7 @@ const AdminPayouts = () => {
         .insert({
           wallet_id: wallet.id,
           amount: operation === 'add' ? amount : -amount,
-          type: operation === 'add' ? 'deposit' : 'withdrawal',
+          type: operation === 'add' ? 'earnings' : 'withdrawal',
           description: description || (operation === 'add' ? 'Manual deposit by admin' : 'Manual withdrawal by admin')
         });
       
@@ -236,7 +236,7 @@ const AdminPayouts = () => {
   const filteredWithdrawals = getFilteredWithdrawals();
   const filteredWallets = getFilteredWallets();
 
-  const handleStatusUpdate = (status: string) => {
+  const handleStatusUpdate = (status: 'pending' | 'processing' | 'completed' | 'rejected') => {
     if (!selectedRequest) return;
     
     updateWithdrawalMutation.mutate({
@@ -554,7 +554,7 @@ const AdminPayouts = () => {
                 <div className="space-y-2">
                   <Label className="text-gray-400">Payment Method</Label>
                   <div className="flex items-center space-x-2">
-                    <BankIcon className="h-5 w-5 text-gray-400" />
+                    <Banknote className="h-5 w-5 text-gray-400" />
                     <span>
                       {selectedRequest.upi_id ? 'UPI' : 'Bank Transfer'}
                     </span>
@@ -648,3 +648,4 @@ const AdminPayouts = () => {
 };
 
 export default AdminPayouts;
+
