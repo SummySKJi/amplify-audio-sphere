@@ -10,9 +10,24 @@ import Platforms from "@/components/Platforms";
 import ContactForm from "@/components/ContactForm";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const Index = () => {
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const handleAdminLogin = async () => {
+    setIsLoggingIn(true);
+    try {
+      await signIn("musicdistributionindia.in@gmail.com", "11111111");
+      toast.success("Admin login successful!");
+    } catch (error) {
+      toast.error("Admin login failed. Please try again.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black to-gray-900">
@@ -44,6 +59,21 @@ const Index = () => {
                 </>
               )}
             </div>
+            
+            {/* Admin Login Button */}
+            {!user && (
+              <div className="mt-4">
+                <Button
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleAdminLogin}
+                  disabled={isLoggingIn}
+                  className="text-gray-400 hover:text-white"
+                >
+                  {isLoggingIn ? "Logging in..." : "Admin Access"}
+                </Button>
+              </div>
+            )}
           </div>
         </section>
         
