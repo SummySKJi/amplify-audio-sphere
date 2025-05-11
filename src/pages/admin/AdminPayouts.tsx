@@ -15,19 +15,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 const statusColors: Record<string, string> = {
   'pending': 'bg-yellow-600 hover:bg-yellow-700',
-  'processing': 'bg-blue-600 hover:bg-blue-700',
+  'in_process': 'bg-blue-600 hover:bg-blue-700',
   'completed': 'bg-green-600 hover:bg-green-700',
   'rejected': 'bg-red-600 hover:bg-red-700',
 };
 
 const statusLabels: Record<string, string> = {
   'pending': 'Pending',
-  'processing': 'Processing',
+  'in_process': 'Processing',
   'completed': 'Completed',
   'rejected': 'Rejected',
 };
 
-type FilterType = 'all' | 'pending' | 'processing' | 'completed' | 'rejected';
+type FilterType = 'all' | 'pending' | 'in_process' | 'completed' | 'rejected';
 
 const AdminPayouts = () => {
   const queryClient = useQueryClient();
@@ -105,7 +105,7 @@ const AdminPayouts = () => {
 
   // Update withdrawal request status mutation
   const updateWithdrawalMutation = useMutation({
-    mutationFn: async ({ id, status, notes }: { id: string, status: 'pending' | 'processing' | 'completed' | 'rejected', notes: string }) => {
+    mutationFn: async ({ id, status, notes }: { id: string, status: 'pending' | 'in_process' | 'completed' | 'rejected', notes: string }) => {
       const { data, error } = await supabase
         .from('withdrawal_requests')
         .update({ 
@@ -236,7 +236,7 @@ const AdminPayouts = () => {
   const filteredWithdrawals = getFilteredWithdrawals();
   const filteredWallets = getFilteredWallets();
 
-  const handleStatusUpdate = (status: 'pending' | 'processing' | 'completed' | 'rejected') => {
+  const handleStatusUpdate = (status: 'pending' | 'in_process' | 'completed' | 'rejected') => {
     if (!selectedRequest) return;
     
     updateWithdrawalMutation.mutate({
@@ -298,7 +298,7 @@ const AdminPayouts = () => {
                 <SelectContent className="bg-gray-800 border-gray-700">
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="in_process">Processing</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
                 </SelectContent>
@@ -595,9 +595,9 @@ const AdminPayouts = () => {
                 <div className="md:col-span-2">
                   <Label className="text-gray-400 mb-2 block">Update Status</Label>
                   <div className="flex flex-wrap gap-3">
-                    {selectedRequest.status !== 'processing' && (
+                    {selectedRequest.status !== 'in_process' && (
                       <Button 
-                        onClick={() => handleStatusUpdate('processing')}
+                        onClick={() => handleStatusUpdate('in_process')}
                         variant="outline"
                         className="bg-blue-600/20 border-blue-600 text-blue-100"
                         disabled={updateWithdrawalMutation.isPending}
@@ -648,4 +648,3 @@ const AdminPayouts = () => {
 };
 
 export default AdminPayouts;
-
