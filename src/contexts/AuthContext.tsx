@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -39,7 +39,11 @@ const cleanupAuthState = () => {
   });
 };
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
@@ -63,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("Profile data:", data);
       setProfile(data);
-      setIsAdmin(data.role === "admin");
+      setIsAdmin(data?.role === "admin");
     } catch (error) {
       console.error("Error in profile fetch:", error);
     }
@@ -77,26 +81,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        console.log("Auth state change event:", event);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-        
-        // Load profile data in a setTimeout to avoid deadlock
-        if (currentSession?.user) {
-          setTimeout(() => {
-            fetchProfile(currentSession.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
+    // Function to handle auth state changes
+    const handleAuthChange = (event: string, currentSession: Session | null) => {
+      console.log("Auth state change event:", event);
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      // Load profile data in a setTimeout to avoid deadlock
+      if (currentSession?.user) {
+        setTimeout(() => {
+          fetchProfile(currentSession.user.id);
+        }, 0);
+      } else {
+        setProfile(null);
+        setIsAdmin(false);
       }
-    );
+    };
+    
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
 
-    // THEN check for existing session
+    // Check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
@@ -107,7 +112,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -148,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error("Error fetching admin profile:", profileError);
         } else {
           console.log("Admin profile:", profileData);
-          if (profileData.role !== 'admin') {
+          if (profileData?.role !== 'admin') {
             // Update the profile to ensure this account is set as admin
             const { error: updateError } = await supabase
               .from("profiles")
@@ -189,10 +196,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/dashboard`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
         }
       });
       
@@ -240,11 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cleanupAuthState();
       
       // Attempt global sign out
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (error) {
-        // Ignore errors
-      }
+      await supabase.auth.signOut({ scope: 'global' });
       
       toast.success('Signed out successfully');
       // Force page reload for a clean state

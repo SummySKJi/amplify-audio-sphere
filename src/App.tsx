@@ -34,7 +34,14 @@ import AdminRoyalty from "./pages/admin/AdminRoyalty";
 import AdminPlatforms from "./pages/admin/AdminPlatforms";
 import AdminProfile from "./pages/admin/AdminProfile";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => {
   return (
@@ -42,8 +49,6 @@ const App = () => {
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
-            <Toaster />
-            <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
@@ -78,6 +83,8 @@ const App = () => {
               
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <Toaster />
+            <Sonner />
           </TooltipProvider>
         </AuthProvider>
       </BrowserRouter>

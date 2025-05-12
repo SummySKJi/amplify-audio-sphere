@@ -35,9 +35,6 @@ const AdminAuth = () => {
     setIsLoading(true);
     
     try {
-      // Log the attempt
-      console.log('Attempting admin login with:', formData.email);
-      
       // Clean up existing auth state
       localStorage.removeItem('supabase.auth.token');
       // Remove all Supabase auth keys from localStorage
@@ -49,7 +46,6 @@ const AdminAuth = () => {
       
       // Attempt sign in
       await signIn(formData.email, formData.password);
-      toast.success("Admin login successful!");
       // Auth context will redirect to dashboard if login is successful and user is admin
     } catch (error: any) {
       console.error('Login error:', error);

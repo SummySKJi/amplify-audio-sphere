@@ -17,23 +17,28 @@ const DashboardLayout = () => {
   const { user, isLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [authCheckComplete, setAuthCheckComplete] = useState(false);
 
   useEffect(() => {
-    // Check for authentication
-    if (!isLoading && !user) {
-      toast.info("You need to sign in to access the dashboard.");
-      navigate("/auth");
-      return;
-    }
-
-    // Show welcome message on first load
-    if (user && !sessionStorage.getItem('dashboardWelcome')) {
-      toast.success(`Welcome to your dashboard, ${user.user_metadata?.full_name || 'User'}!`);
-      sessionStorage.setItem('dashboardWelcome', 'true');
+    if (!isLoading) {
+      // Check for authentication
+      if (!user) {
+        toast.info("You need to sign in to access the dashboard.");
+        navigate("/auth");
+        return;
+      }
+      
+      setAuthCheckComplete(true);
+      
+      // Show welcome message only on first load
+      if (user && !sessionStorage.getItem('dashboardWelcome')) {
+        toast.success(`Welcome to your dashboard, ${user.user_metadata?.full_name || 'User'}!`);
+        sessionStorage.setItem('dashboardWelcome', 'true');
+      }
     }
   }, [user, isLoading, navigate]);
 
-  if (isLoading) {
+  if (isLoading || !authCheckComplete) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-gray-900 via-gray-950 to-black text-white">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />

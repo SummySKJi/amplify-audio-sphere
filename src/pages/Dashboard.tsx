@@ -175,7 +175,7 @@ const Dashboard = () => {
     enabled: !!user?.id && authChecked
   });
 
-  // Empty earnings data - no more demo data
+  // Empty earnings data - no mock data
   const emptyEarningsData = [
     { name: "Jan", total: 0 },
     { name: "Feb", total: 0 },
@@ -347,6 +347,7 @@ const Dashboard = () => {
             </CardContent>
           </Card>
           
+          {/* More admin stats */}
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="pb-2">
               <CardTitle className="text-white text-sm font-medium">Total Artists</CardTitle>
@@ -483,7 +484,7 @@ const Dashboard = () => {
             {isAdmin ? (
               // Admin activity
               recentActivity && recentActivity.length > 0 ? (
-                recentActivity.map((activity) => (
+                recentActivity.map((activity: any) => (
                   <div key={`${activity.type}-${activity.id}`} className="flex items-start gap-4 border-b border-gray-700 pb-4">
                     <div className="ml-2 flex-1">
                       <p className="text-sm font-medium text-white">{activity.title}</p>
@@ -517,7 +518,7 @@ const Dashboard = () => {
             ) : (
               // Customer activity
               recentActivity && recentActivity.length > 0 ? (
-                recentActivity.map((release) => (
+                recentActivity.map((release: any) => (
                   <div key={release.id} className="flex items-start gap-4 border-b border-gray-700 pb-4">
                     <div className="ml-2 flex-1">
                       <p className="text-sm font-medium text-white">
