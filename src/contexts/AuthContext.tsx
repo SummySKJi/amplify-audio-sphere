@@ -64,7 +64,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log("Profile data:", data);
       setProfile(data);
       setIsAdmin(data.role === "admin");
-      console.log("Is admin:", data.role === "admin");
     } catch (error) {
       console.error("Error in profile fetch:", error);
     }
@@ -123,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Continue even if this fails
       }
       
-      console.log("Signing in with:", email, "Admin email match:", email === 'musicdistributionindia.in@gmail.com');
+      console.log("Signing in with:", email);
       
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
@@ -135,7 +134,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log("Sign in successful:", data);
       
-      // Check if this is the admin account immediately after login
+      // Check if this is the admin account
       if (data.user && email === 'musicdistributionindia.in@gmail.com') {
         console.log("Admin login detected");
         // Fetch profile to confirm admin status
@@ -189,7 +188,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + '/dashboard'
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
       
@@ -253,7 +256,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=login`,
+      });
       
       if (error) {
         toast.error(error.message);

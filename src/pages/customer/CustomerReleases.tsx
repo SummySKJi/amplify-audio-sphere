@@ -47,6 +47,8 @@ const CustomerReleases = () => {
   const { data: releases, isLoading } = useQuery({
     queryKey: ['releases', user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+      
       let query = supabase
         .from('releases')
         .select(`
@@ -64,7 +66,10 @@ const CustomerReleases = () => {
       
       const { data, error } = await query;
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching releases:", error);
+        throw error;
+      }
       return data || [];
     },
     enabled: !!user
@@ -138,12 +143,12 @@ const CustomerReleases = () => {
                     (e.target as HTMLImageElement).src = "https://placehold.co/400x400/333/white?text=No+Image";
                   }}
                 />
-                <Badge className={`absolute top-2 right-2 ${statusColors[release.status]}`}>
-                  {statusLabels[release.status]}
+                <Badge className={`absolute top-2 right-2 ${statusColors[release.status] || 'bg-gray-600'}`}>
+                  {statusLabels[release.status] || 'Unknown'}
                 </Badge>
               </div>
               <CardHeader className="pb-2">
-                <CardTitle className="text-white text-lg">{release.song_name}</CardTitle>
+                <CardTitle className="text-white text-lg">{release.song_name || 'Untitled'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-1">
@@ -157,7 +162,7 @@ const CustomerReleases = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-400">Type:</span>
-                    <span className="text-sm text-white capitalize">{release.type}</span>
+                    <span className="text-sm text-white capitalize">{release.type || 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-400">Release Date:</span>

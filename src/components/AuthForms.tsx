@@ -26,11 +26,10 @@ const AuthForms = ({ initialMode = 'login' }: AuthFormsProps) => {
     try {
       setIsGoogleLoading(true);
       await signInWithGoogle();
+      // The signInWithGoogle function will handle the redirect
     } catch (error) {
       console.error('Google sign in error:', error);
-    } finally {
-      // If there's no redirect, eventually reset the loading state
-      setTimeout(() => setIsGoogleLoading(false), 5000);
+      setIsGoogleLoading(false);
     }
   };
 

@@ -124,7 +124,7 @@ const Dashboard = () => {
           ...(releasesRes.data || []).map(r => ({
             type: 'release',
             id: r.id,
-            title: `New release: ${r.song_name}`,
+            title: `New release: ${r.song_name || 'Untitled'}`,
             description: `By ${r.artists?.name || 'Unknown'} from ${r.profiles?.full_name || 'Unknown'}`,
             status: r.status,
             date: r.created_at,
@@ -133,7 +133,7 @@ const Dashboard = () => {
           ...(withdrawalsRes.data || []).map(w => ({
             type: 'withdrawal',
             id: w.id,
-            title: `Withdrawal request: ₹${w.amount}`,
+            title: `Withdrawal request: ₹${w.amount || 0}`,
             description: `From ${w.profiles?.full_name || 'Unknown'}`,
             status: w.status,
             date: w.created_at
@@ -175,14 +175,14 @@ const Dashboard = () => {
     enabled: !!user?.id && authChecked
   });
 
-  // Mock data for charts
-  const mockData = [
-    { name: "Jan", total: 2400 },
-    { name: "Feb", total: 1398 },
-    { name: "Mar", total: 9800 },
-    { name: "Apr", total: 3908 },
-    { name: "May", total: 4800 },
-    { name: "Jun", total: 3800 },
+  // Empty earnings data - no more demo data
+  const emptyEarningsData = [
+    { name: "Jan", total: 0 },
+    { name: "Feb", total: 0 },
+    { name: "Mar", total: 0 },
+    { name: "Apr", total: 0 },
+    { name: "May", total: 0 },
+    { name: "Jun", total: 0 },
   ];
 
   // Quick links for customer vs admin
@@ -310,7 +310,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Total Customers</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.totalCustomers}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.totalCustomers || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Registered users</p>
             </CardContent>
           </Card>
@@ -320,7 +320,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Total Releases</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.totalReleases}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.totalReleases || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Music submissions</p>
             </CardContent>
           </Card>
@@ -330,7 +330,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Music in Review</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.pendingReleases}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.pendingReleases || 0}</div>
               <p className="text-xs text-gray-400 mt-1">
                 <Link to="/dashboard/music" className="hover:underline">Pending review</Link>
               </p>
@@ -342,7 +342,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Live Releases</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.liveReleases}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.liveReleases || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Active on platforms</p>
             </CardContent>
           </Card>
@@ -352,7 +352,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Total Artists</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.totalArtists}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.totalArtists || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Registered artists</p>
             </CardContent>
           </Card>
@@ -362,7 +362,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Total Labels</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.totalLabels}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.totalLabels || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Registered labels</p>
             </CardContent>
           </Card>
@@ -372,7 +372,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Pending Withdrawals</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.pendingWithdrawals}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.pendingWithdrawals || 0}</div>
               <p className="text-xs text-gray-400 mt-1">
                 <Link to="/dashboard/payouts" className="hover:underline">Awaiting processing</Link>
               </p>
@@ -384,7 +384,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Total Balance</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">₹{dashboardData?.totalEarnings}</div>
+              <div className="text-2xl font-bold text-white">₹{dashboardData?.totalEarnings || 0}</div>
               <p className="text-xs text-gray-400 mt-1">All customer wallets</p>
             </CardContent>
           </Card>
@@ -417,7 +417,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Pending Reviews</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.pendingReleases}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.pendingReleases || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Releases awaiting approval</p>
             </CardContent>
           </Card>
@@ -427,7 +427,7 @@ const Dashboard = () => {
               <CardTitle className="text-white text-sm font-medium">Live Releases</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{dashboardData?.liveReleases}</div>
+              <div className="text-2xl font-bold text-white">{dashboardData?.liveReleases || 0}</div>
               <p className="text-xs text-gray-400 mt-1">Available on streaming platforms</p>
             </CardContent>
           </Card>
@@ -444,7 +444,7 @@ const Dashboard = () => {
         </CardHeader>
         <CardContent className="pl-2">
           <ResponsiveContainer width="100%" height={350}>
-            <BarChart data={mockData}>
+            <BarChart data={emptyEarningsData}>
               <XAxis
                 dataKey="name"
                 stroke="#888888"
@@ -507,8 +507,11 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-8">
                   <p className="text-sm text-gray-400">No recent activity</p>
+                  <Button asChild variant="link" className="mt-2">
+                    <Link to="/dashboard/music">Start by reviewing submitted music</Link>
+                  </Button>
                 </div>
               )
             ) : (
@@ -524,7 +527,7 @@ const Dashboard = () => {
                         release.status === 'live' ? 'Release now live' : 'Release status updated'}
                       </p>
                       <p className="text-xs text-gray-400">
-                        Your song "{release.song_name}" by {release.artists?.name || 'Unknown'} is {release.status.replace('_', ' ')}
+                        Your song "{release.song_name || 'Untitled'}" by {release.artists?.name || 'Unknown'} is {(release.status || '').replace('_', ' ')}
                       </p>
                       <p className="text-xs text-gray-500 mt-1">{new Date(release.created_at).toLocaleString()}</p>
                     </div>
@@ -541,7 +544,7 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <div className="text-center py-4">
+                <div className="text-center py-8">
                   <p className="text-sm text-gray-400">No recent activity</p>
                   <Button asChild variant="link" className="mt-2">
                     <Link to="/dashboard/upload">Upload your first release</Link>
@@ -550,7 +553,7 @@ const Dashboard = () => {
               )
             )}
             
-            {isAdmin ? (
+            {isAdmin && recentActivity?.length > 0 ? (
               <div className="text-center pt-2">
                 <Button asChild variant="link">
                   <Link to="/dashboard/music">View all music</Link>

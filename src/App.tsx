@@ -11,7 +11,6 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import DashboardLayout from "./components/layouts/DashboardLayout";
-import React from "react";
 
 // Import customer dashboard pages
 import CustomerUpload from "./pages/customer/CustomerUpload";
@@ -37,8 +36,8 @@ import AdminProfile from "./pages/admin/AdminProfile";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <React.StrictMode>
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
@@ -83,7 +82,7 @@ const App = () => (
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
-  </React.StrictMode>
-);
+  );
+};
 
 export default App;

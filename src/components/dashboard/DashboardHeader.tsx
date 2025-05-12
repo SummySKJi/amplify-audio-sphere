@@ -20,13 +20,15 @@ import {
 } from "@/components/ui/popover";
 
 const DashboardHeader = () => {
-  const { profile, signOut, isAdmin } = useAuth();
+  const { profile, signOut, isAdmin, user } = useAuth();
   const [notificationCount, setNotificationCount] = useState(0);
 
   // Fetch notifications (pending reviews, new reports, etc.)
   const { data: notifications } = useQuery({
-    queryKey: ['notifications'],
+    queryKey: ['notifications', user?.id],
     queryFn: async () => {
+      if (!user?.id) return null;
+      
       // For customer: fetch pending releases
       // For admin: fetch all pending items
       if (isAdmin) {
@@ -47,11 +49,13 @@ const DashboardHeader = () => {
         const [releasesRes, reportsRes] = await Promise.all([
           supabase.from('releases')
             .select('id')
+            .eq('user_id', user.id)
             .eq('status', 'approved')
             .order('updated_at', { ascending: false })
             .limit(3),
           supabase.from('royalty_reports')
             .select('id')
+            .eq('user_id', user.id)
             .order('created_at', { ascending: false })
             .limit(3)
         ]);
@@ -63,7 +67,7 @@ const DashboardHeader = () => {
       }
     },
     refetchInterval: 60000, // Refetch every minute
-    enabled: !!profile
+    enabled: !!user?.id
   });
 
   // Calculate notification count
@@ -227,8 +231,8 @@ const DashboardHeader = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-4 py-3 border-b border-gray-700">
-              <p className="text-sm font-medium">{profile?.full_name}</p>
-              <p className="text-xs text-gray-400 mt-1 truncate">{profile?.email}</p>
+              <p className="text-sm font-medium">{profile?.full_name || 'User'}</p>
+              <p className="text-xs text-gray-400 mt-1 truncate">{profile?.email || user?.email}</p>
             </div>
             <Link to="/dashboard">
               <DropdownMenuItem>
