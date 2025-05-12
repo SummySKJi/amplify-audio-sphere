@@ -14,7 +14,7 @@ const AdminAuth = () => {
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({
-    email: 'musicdistributionindia.in@gmail.com', // Pre-filled admin email
+    email: 'Admin@mdi.in', // Updated admin email
     password: ''
   });
 
@@ -80,7 +80,6 @@ const AdminAuth = () => {
                   required
                   placeholder="Admin Email"
                   className="flex-grow border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                  readOnly // Make email read-only but not visually disabled
                 />
                 <User className="text-gray-400 h-5 w-5" />
               </div>

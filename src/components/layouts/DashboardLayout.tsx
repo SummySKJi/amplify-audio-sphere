@@ -28,15 +28,17 @@ const DashboardLayout = () => {
         return;
       }
       
+      // Set auth check complete after verifying login
       setAuthCheckComplete(true);
       
       // Show welcome message only on first load
       if (user && !sessionStorage.getItem('dashboardWelcome')) {
-        toast.success(`Welcome to your dashboard, ${user.user_metadata?.full_name || 'User'}!`);
+        const welcomeName = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+        toast.success(`Welcome to your dashboard${isAdmin ? ' (Admin)' : ''}, ${welcomeName}!`);
         sessionStorage.setItem('dashboardWelcome', 'true');
       }
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, isAdmin]);
 
   if (isLoading || !authCheckComplete) {
     return (

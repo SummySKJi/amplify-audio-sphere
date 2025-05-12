@@ -64,8 +64,8 @@ const AdminSidebar = ({ mobile = false }: { mobile?: boolean }) => {
       icon: <Settings className="w-5 h-5" />,
     },
     {
-      name: "Profile",
-      path: "/dashboard/profile",
+      name: "Admin Profile",
+      path: "/dashboard/admin-profile",
       icon: <UserCircle className="w-5 h-5" />,
     }
   ];
@@ -81,6 +81,7 @@ const AdminSidebar = ({ mobile = false }: { mobile?: boolean }) => {
     <div className="h-full flex flex-col bg-gray-800 border-r border-gray-700 overflow-y-auto">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-white">Admin Panel</h2>
+        <p className="text-sm text-gray-400 mt-1">Music Distribution India</p>
       </div>
       
       <nav className="flex-1 px-4 pb-6 space-y-1">

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,7 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log("Sign in successful:", data);
       
       // Check if this is the admin account
-      if (data.user && email === 'musicdistributionindia.in@gmail.com') {
+      if (data.user && (email.toLowerCase() === 'admin@mdi.in' || email.toLowerCase() === 'musicdistributionindia.in@gmail.com')) {
         console.log("Admin login detected");
         // Fetch profile to confirm admin status
         const { data: profileData, error: profileError } = await supabase
@@ -166,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
               console.error("Error updating admin role:", updateError);
             } else {
               console.log("Admin role set successfully");
+              setIsAdmin(true);
             }
           }
         }
