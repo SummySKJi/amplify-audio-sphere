@@ -16,6 +16,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -173,6 +174,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    try {
+      // Clean up existing auth state
+      cleanupAuthState();
+      
+      // Attempt global sign out first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (error) {
+        // Continue even if this fails
+      }
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
+      });
+      
+      if (error) {
+        console.error("Google sign in error:", error);
+        toast.error(error.message);
+        throw error;
+      }
+
+      console.log("Google sign in initiated:", data);
+      // No need for navigation here as OAuth will handle the redirect
+    } catch (error: any) {
+      console.error("Google sign in catch error:", error);
+      toast.error(error.message || 'Failed to sign in with Google');
+      throw error;
+    }
+  };
+
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
       const { error } = await supabase.auth.signUp({ 
@@ -241,7 +276,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     resetPassword,
-    refreshProfile
+    refreshProfile,
+    signInWithGoogle
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

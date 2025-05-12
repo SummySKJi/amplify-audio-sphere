@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import DashboardLayout from "./components/layouts/DashboardLayout";
+import React from "react";
 
 // Import customer dashboard pages
 import CustomerUpload from "./pages/customer/CustomerUpload";
@@ -37,50 +38,52 @@ import AdminProfile from "./pages/admin/AdminProfile";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/admin" element={<AdminAuth />} />
-            
-            {/* Dashboard routes */}
-            <Route path="/dashboard" element={<DashboardLayout />}>
-              <Route index element={<Dashboard />} />
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/admin" element={<AdminAuth />} />
               
-              {/* Customer routes */}
-              <Route path="upload" element={<CustomerUpload />} />
-              <Route path="releases" element={<CustomerReleases />} />
-              <Route path="wallet" element={<CustomerWallet />} />
-              <Route path="royalty-reports" element={<CustomerRoyalty />} />
-              <Route path="copyright-removal" element={<CustomerCopyright />} />
-              <Route path="oac-request" element={<CustomerOac />} />
-              <Route path="artists" element={<CustomerArtists />} />
-              <Route path="labels" element={<CustomerLabels />} />
-              <Route path="profile" element={<CustomerProfile />} />
+              {/* Dashboard routes */}
+              <Route path="/dashboard" element={<DashboardLayout />}>
+                <Route index element={<Dashboard />} />
+                
+                {/* Customer routes */}
+                <Route path="upload" element={<CustomerUpload />} />
+                <Route path="releases" element={<CustomerReleases />} />
+                <Route path="wallet" element={<CustomerWallet />} />
+                <Route path="royalty-reports" element={<CustomerRoyalty />} />
+                <Route path="copyright-removal" element={<CustomerCopyright />} />
+                <Route path="oac-request" element={<CustomerOac />} />
+                <Route path="artists" element={<CustomerArtists />} />
+                <Route path="labels" element={<CustomerLabels />} />
+                <Route path="profile" element={<CustomerProfile />} />
+                
+                {/* Admin routes */}
+                <Route path="music" element={<AdminMusic />} />
+                <Route path="customers" element={<AdminCustomers />} />
+                <Route path="entities" element={<AdminEntities />} />
+                <Route path="payouts" element={<AdminPayouts />} />
+                <Route path="copyright-requests" element={<AdminCopyright />} />
+                <Route path="oac-requests" element={<AdminOac />} />
+                <Route path="royalty-upload" element={<AdminRoyalty />} />
+                <Route path="platforms" element={<AdminPlatforms />} />
+                <Route path="admin-profile" element={<AdminProfile />} />
+              </Route>
               
-              {/* Admin routes */}
-              <Route path="music" element={<AdminMusic />} />
-              <Route path="customers" element={<AdminCustomers />} />
-              <Route path="entities" element={<AdminEntities />} />
-              <Route path="payouts" element={<AdminPayouts />} />
-              <Route path="copyright-requests" element={<AdminCopyright />} />
-              <Route path="oac-requests" element={<AdminOac />} />
-              <Route path="royalty-upload" element={<AdminRoyalty />} />
-              <Route path="platforms" element={<AdminPlatforms />} />
-              <Route path="admin-profile" element={<AdminProfile />} />
-            </Route>
-            
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </TooltipProvider>
         </AuthProvider>
       </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </React.StrictMode>
 );
 
 export default App;
