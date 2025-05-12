@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -50,6 +51,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Function to check if email is an admin email
+  const isAdminEmail = (email: string): boolean => {
+    const adminEmails = ['admin@mdi.in', 'musicdistributionindia.in@gmail.com'];
+    return adminEmails.includes(email.toLowerCase());
+  };
+
   // Function to fetch user profile data
   const fetchProfile = async (userId: string) => {
     try {
@@ -66,9 +73,38 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log("Profile data:", data);
       setProfile(data);
-      setIsAdmin(data?.role === "admin");
+      
+      // Update isAdmin state based on profile role
+      const adminRole = data?.role === "admin";
+      setIsAdmin(adminRole);
+      
+      // If profile exists but doesn't have admin role, check if it should
+      if (data && !adminRole && user?.email && isAdminEmail(user.email)) {
+        console.log("This appears to be an admin account, updating role...");
+        await updateUserRole(userId, "admin");
+      }
     } catch (error) {
       console.error("Error in profile fetch:", error);
+    }
+  };
+  
+  // Function to update user role
+  const updateUserRole = async (userId: string, role: string) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ role: role })
+        .eq("id", userId);
+        
+      if (error) {
+        console.error("Error updating user role:", error);
+        return;
+      }
+      
+      console.log(`User role updated to ${role}`);
+      setIsAdmin(role === "admin");
+    } catch (error) {
+      console.error("Error updating user role:", error);
     }
   };
 
@@ -140,34 +176,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log("Sign in successful:", data);
       
-      // Check if this is the admin account
-      if (data.user && (email.toLowerCase() === 'admin@mdi.in' || email.toLowerCase() === 'musicdistributionindia.in@gmail.com')) {
-        console.log("Admin login detected");
-        // Fetch profile to confirm admin status
-        const { data: profileData, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-          
-        if (profileError) {
-          console.error("Error fetching admin profile:", profileError);
-        } else {
-          console.log("Admin profile:", profileData);
-          if (profileData?.role !== 'admin') {
-            // Update the profile to ensure this account is set as admin
-            const { error: updateError } = await supabase
-              .from("profiles")
-              .update({ role: 'admin' })
-              .eq("id", data.user.id);
-              
-            if (updateError) {
-              console.error("Error updating admin role:", updateError);
+      // Check if this is an admin account
+      if (data.user) {
+        const isEmailAdmin = isAdminEmail(email);
+        
+        if (isEmailAdmin) {
+          console.log("Admin login detected");
+          // Fetch profile to confirm or update admin status
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", data.user.id)
+            .single();
+            
+          if (profileError) {
+            console.error("Error fetching admin profile:", profileError);
+          } else {
+            console.log("Admin profile:", profileData);
+            if (profileData?.role !== 'admin') {
+              // Update the profile to ensure this account is set as admin
+              await updateUserRole(data.user.id, "admin");
             } else {
-              console.log("Admin role set successfully");
               setIsAdmin(true);
             }
           }
+          
+          // Direct admin to dashboard
+          toast.success('Admin signed in successfully!');
+          navigate('/dashboard');
+          return;
         }
       }
 

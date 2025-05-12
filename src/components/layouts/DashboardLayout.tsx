@@ -37,6 +37,21 @@ const DashboardLayout = () => {
         toast.success(`Welcome to your dashboard${isAdmin ? ' (Admin)' : ''}, ${welcomeName}!`);
         sessionStorage.setItem('dashboardWelcome', 'true');
       }
+      
+      // For admin-specific routes, redirect non-admins
+      const isAdminRoute = window.location.pathname.includes('/admin-') || 
+                           window.location.pathname.includes('/music') || 
+                           window.location.pathname.includes('/customers') ||
+                           window.location.pathname.includes('/entities') ||
+                           window.location.pathname.includes('/payouts') ||
+                           window.location.pathname.includes('/royalty-upload') ||
+                           window.location.pathname.includes('/platforms');
+                           
+      if (isAdminRoute && !isAdmin) {
+        toast.error("You don't have permission to access this page.");
+        navigate('/dashboard');
+        return;
+      }
     }
   }, [user, isLoading, navigate, isAdmin]);
 
